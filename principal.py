@@ -11,13 +11,13 @@ class Ambiente:
     def __init__(self, nome_arquivo='mario.gb', modo_silencioso=True):
         tipo_janela = "headless" if modo_silencioso else "SDL2"
         self.pyboy = PyBoy(nome_arquivo, window=tipo_janela, debug=modo_silencioso)
-        self.pyboy.set_emulation_speed(100)
+        self.pyboy.set_emulation_speed(500)
         self.mario = self.pyboy.game_wrapper
         self.mario.start_game()
 
     def calcular_fitness(self):
-        # TODO: Pode mudar o cálculo do fitness
-        return self.mario.score + 2 * self.mario.level_progress + self.mario.time_left
+        # Ajuste no cálculo do fitness
+        return self.mario.score + 20 * self.mario.level_progress + self.mario.time_left
 
     def fim_de_jogo(self):
         return self.mario.lives_left == 1 or self.mario.score < 0
@@ -31,7 +31,7 @@ class Ambiente:
         if self.fim_de_jogo():
             print("Fim de jogo detectado")
             return None, 0, 0, "Fim de Jogo"
-        # TODO: Pode mudar as ações, ainda pode usar down e up
+        
         acoes = {
             0: WindowEvent.PRESS_ARROW_LEFT,
             1: WindowEvent.PRESS_ARROW_RIGHT,
@@ -63,12 +63,10 @@ class Ambiente:
         self.pyboy.stop()
 
 class Individuo:
-    # TODO: Pode mudar a quantidade de ações e a duração
-    def __init__(self):
-        self.acoes = [(random.randint(0, 2), random.randint(1, 10)) for _ in range(5000)]
+    def __init__(self, tamanho_acoes=5000):
+        self.acoes = [(random.randint(0, 2), random.randint(1, 10)) for _ in range(tamanho_acoes)]
         self.fitness = 0
 
-    # TODO: Fique à vontade para mudar a função de avaliação e adicionar/remover parâmetros
     def avaliar(self, ambiente):
         estado = ambiente.reset()
         fitness_total = 0
@@ -89,23 +87,37 @@ class Individuo:
         self.fitness = fitness_total + pontos_tempo + movimentos_direita * 5
         return self.fitness
 
-# A divisão é para dar numeros mais manejáveis
 def avaliar_fitness(individuo, ambiente):
     fitness = individuo.avaliar(ambiente)
     fitness_normalizado = fitness / 10000
     return fitness_normalizado
 
-def iniciar_individuos(populacao):
-    return [Individuo() for _ in range(populacao)]
+def iniciar_individuos(populacao, tamanho_acoes=5000):
+    return [Individuo(tamanho_acoes) for _ in range(populacao)]
 
-def selecao(individuos):
-    # TODO: Implementar seleção por torneio
-    
+def selecao(individuos, tamanho_torneio=3):
+    selecionados = []
+    for _ in range(len(individuos)):
+        torneio = random.sample(individuos, tamanho_torneio)
+        vencedor = max(torneio, key=lambda x: x.fitness)
+        selecionados.append(vencedor)
+    return selecionados
+
 def cruzamento(pai1, pai2):
-    # TODO: Implementar cruzamento
+    ponto_corte = random.randint(1, len(pai1.acoes) - 1)
+    filho1_acoes = pai1.acoes[:ponto_corte] + pai2.acoes[ponto_corte:]
+    filho2_acoes = pai2.acoes[:ponto_corte] + pai1.acoes[ponto_corte:]
+    filho1 = Individuo()
+    filho2 = Individuo()
+    filho1.acoes = filho1_acoes
+    filho2.acoes = filho2_acoes
+    return filho1, filho2
 
 def mutacao(individuo, taxa_mutacao=0.1):
-    # TODO: Implementar mutação
+    for i in range(len(individuo.acoes)):
+        if random.random() < taxa_mutacao:
+            individuo.acoes[i] = (random.randint(0, 2), random.randint(1, 10))
+    return individuo
 
 def imprimir_acoes_individuo(individuo):
     nomes_acoes = ["esquerda", "direita", "A"]
@@ -147,13 +159,14 @@ def algoritmo_genetico(populacao, ambiente, geracoes=100):
 def rodar_melhor_modelo(ambiente, melhor_individuo):
     while True:
         estado = ambiente.reset()
-        for acao in melhor_individuo.acoes:
-            estado, fitness, tempo_restante, progresso_nivel = ambiente.passo(acao)
+        for acao, duracao in melhor_individuo.acoes:
+            estado, fitness, tempo_restante, progresso_nivel = ambiente.passo(acao, duracao)
 
         print("Loop completado, reiniciando...")
 
 ambiente = Ambiente(modo_silencioso=False)
 populacao = iniciar_individuos(10)
-algoritmo_genetico(populacao, ambiente)
+melhor_individuo = algoritmo_genetico(populacao, ambiente)
+rodar_melhor_modelo(ambiente, melhor_individuo)
 
 # TODO: O que fazer com tamanho dos indivíduos? Podem aumentar ao longo do tempo?
