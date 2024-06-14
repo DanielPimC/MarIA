@@ -16,7 +16,6 @@ class Ambiente:
         self.mario.start_game()
 
     def calcular_fitness(self):
-        # Ajuste no cálculo do fitness
         return self.mario.score + 20 * self.mario.level_progress + self.mario.time_left
 
     def fim_de_jogo(self):
